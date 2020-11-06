@@ -80,18 +80,24 @@ def f_paintable_multipartite(parts, fvals):
     #print(indent, "Painter wins this one")
     return True
 
-
 def k_for_all_verts(k, parts):
     res = []
     for p in parts:
         res.append(tuple(it.repeat(k,p)))
     return tuple(res)
 
+def paintability(parts, kmax):
+    for k in range(2, kmax):
+        if f_paintable_multipartite(parts, k_for_all_verts(k, parts)):
+            return k
+    return -1
+
 def test_k(k, imin, imax, jmin, jmax):
     for i in range(imin,imax):
-        for j in range(jmin,jmax):
-            print("Complete ", i, ",", j)
+        for j in range(max(i, jmin),jmax):
+            print("Complete", i, ",", j)
             parts = (i,j)
             print(f_paintable_multipartite(parts, k_for_all_verts(k, parts)))
 
-test_k(3, 2, 7, 2, 7)
+
+print(paintability((4,6),5))
