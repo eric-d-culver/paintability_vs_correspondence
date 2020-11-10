@@ -8,20 +8,11 @@ type Choice = [[Int]]
 
 type FVals = [[Int]]
 
-check :: Parts -> FVals -> Bool
-check ps fs = all (\(p,f) -> p == length f) $ zip ps fs
+leqList :: [Int] -> [[Int]]
+leqList l = sequence $ map (\i -> [0..i]) l
 
-subsets :: Int -> [[Int]]
-subsets n = filterM (\x -> [False, True]) [0..(n-1)]
-
-lister :: Parts -> [Choice]
-lister ps = tail $ sequence $ map subsets ps
--- tail removes empty set, which is head (requires understanding of how subsets works)
--- could reduce num of choices to check by removing disconnected ones
--- those would be ones with multiple vertices in one part and no vertices in any other part
-
-new_parts :: Parts -> Choice -> Int -> Parts
-new_parts ps cs n = let (ys, zs) = splitAt n ps in ys ++ [(head zs) - (length (cs !! n))] ++ (tail zs)
+lister :: FVals -> [Choice]
+lister fs = filter (any (\x -> sum(x) /= 0)) $ sequence $ map leqList fs 
 
 delete_index :: Int -> [a] -> [a]
 delete_index n xs = let (ys, zs) = splitAt n xs in ys ++ (tail zs)
@@ -39,26 +30,16 @@ new_fvals (f:fs) (c:cs) n = (compose (map dec_index c) f) : (new_fvals fs cs (n-
 new_fvals [] [] _ = []
 -- could sort each list, might make it faster because of symmetries
 
-new_pairs :: Parts -> FVals -> Choice -> Int -> (Parts, FVals)
-new_pairs ps fs cs i = (new_parts ps cs i, new_fvals fs cs i)
+painter :: FVals -> Choice -> [FVals]
+painter fs cs = map (new_fvals fs cs) $ filter (\i -> (cs !! i) /= []) [0..(length fs - 1)]
 
-painter :: Parts -> FVals -> Choice -> [(Parts, FVals)]
-painter ps fs cs = map (new_pairs ps fs cs) $ filter (\i -> (cs !! i) /= []) [0..(length ps - 1)]
-
-fPaintable' :: Parts -> FVals -> Bool
-fPaintable' [] [] = True
-fPaintable' (0:ps) ([]:fs) = fPaintable' ps fs
-fPaintable' ps fs = all (any (uncurry fPaintable') . painter ps fs) $ lister ps
-
-fPaintable :: Parts -> FVals -> Maybe Bool
-fPaintable [] [] = Just True
-fPaintable (0:ps) ([]:fs) = fPaintable ps fs
-fPaintable ps fs = case check ps fs of
-                        False -> Nothing
-                        True -> Just $ all (any (uncurry fPaintable') . painter ps fs) $ lister ps
+fPaintable :: FVals -> Bool
+fPaintable [] = True
+fPaintable ([]:fs) = fPaintable fs
+fPaintable fs = all (any fPaintable . painter fs) $ lister fs
 
 all_k :: Parts -> Int -> FVals
 all_k ps k = map (flip replicate k) ps
 
 paintability :: Parts -> Int
-paintability ps = head $ filter (fPaintable' ps . all_k ps) [2..]
+paintability ps = head $ filter (fPaintable . all_k ps) [2..]

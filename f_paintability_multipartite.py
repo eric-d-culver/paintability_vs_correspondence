@@ -8,10 +8,18 @@ def subsets(n):
         for l in it.combinations(range(n),k):
             yield l
 
+def upto(n):
+    for i in range(n+1):
+        yield i
+
+def leqList(l):
+    for k in it.product(*map(upto, l)):
+        yield k
+
 def lister(fvals):
-    for t in it.product(*map(subsets, [len(x) for x in fvals])):
+    for t in it.product(*map(leqList, l)):
         # need to check for empty choice (not allowed)
-        if all(len(l) == 0 for l in t):
+        if all(sum(l) == 0 for l in t):
             continue
         # otherwise it is fine
         yield t
