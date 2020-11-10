@@ -15,13 +15,13 @@ subsets :: Int -> [[Int]]
 subsets n = filterM (\x -> [False, True]) [0..(n-1)]
 
 lister :: Parts -> [Choice]
-lister ps = filter (any (/=[])) $ sequence $ map subsets ps
+lister ps = tail $ sequence $ map subsets ps
+-- tail removes empty set, which is head (requires understanding of how subsets works)
+-- could reduce num of choices to check by removing disconnected ones
+-- those would be ones with multiple vertices in one part and no vertices in any other part
 
 new_parts :: Parts -> Choice -> Int -> Parts
 new_parts ps cs n = let (ys, zs) = splitAt n ps in ys ++ [(head zs) - (length (cs !! n))] ++ (tail zs)
---new_parts (p:ps) (c:cs) 0 = (p - (length c)) : ps
---new_parts (p:ps) (c:cs) n = p : (new_parts ps cs (n-1))
---new_parts [] _ _ = []
 
 delete_index :: Int -> [a] -> [a]
 delete_index n xs = let (ys, zs) = splitAt n xs in ys ++ (tail zs)
@@ -37,12 +37,13 @@ new_fvals (f:fs) (c:cs) (-1) = (compose (map dec_index c) f) : (new_fvals fs cs 
 new_fvals (f:fs) (c:cs) 0 = (compose (map delete_index c) f) : (new_fvals fs cs (-1))
 new_fvals (f:fs) (c:cs) n = (compose (map dec_index c) f) : (new_fvals fs cs (n-1))
 new_fvals [] [] _ = []
+-- could sort each list, might make it faster because of symmetries
 
 new_pairs :: Parts -> FVals -> Choice -> Int -> (Parts, FVals)
 new_pairs ps fs cs i = (new_parts ps cs i, new_fvals fs cs i)
 
 painter :: Parts -> FVals -> Choice -> [(Parts, FVals)]
-painter ps fs cs = map (new_pairs ps fs cs) $ filter (\i -> cs !! i /= []) [0..(length ps - 1)]
+painter ps fs cs = map (new_pairs ps fs cs) $ filter (\i -> (cs !! i) /= []) [0..(length ps - 1)]
 
 fPaintable' :: Parts -> FVals -> Bool
 fPaintable' [] [] = True
