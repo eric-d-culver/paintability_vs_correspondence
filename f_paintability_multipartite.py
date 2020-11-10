@@ -8,8 +8,8 @@ def subsets(n):
         for l in it.combinations(range(n),k):
             yield l
 
-def lister(parts): # need a new version for fvals instead of parts
-    for t in it.product(*map(subsets, parts)):
+def lister(fvals):
+    for t in it.product(*map(subsets, [len(x) for x in fvals])):
         # need to check for empty choice (not allowed)
         if all(len(l) == 0 for l in t):
             continue
