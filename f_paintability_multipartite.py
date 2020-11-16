@@ -100,4 +100,4 @@ def test_k(k, imin, imax, jmin, jmax):
             print(f_paintable_multipartite(parts, k_for_all_verts(k, parts)))
 
 
-print(paintability((4,6),5))
+print(paintability((4,7),5))
