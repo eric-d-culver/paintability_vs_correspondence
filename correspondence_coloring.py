@@ -74,24 +74,60 @@ def precolored_tree(k, tree, precolored):
 def valid_precolorings(k, nontree_edges, correspondences):
     precolored_verts = list(set(e[0] for e in nontree_edges).union(set(e[1] for e in nontree_edges)))
     num_precolored = len(precolored_verts)
+    correspondence_dict = {edge : correspondence for (edge, correspondence) in zip(nontree_edges, correspondences)}
     for coloring in it.product(range(k), repeat=num_precolored):
-        coloring_dict = {key : value for (key, value) in zip(precolored_verts, coloring)}
-        for i in range(num_precolored):
-            for j in range(len(nontree_edges)):
-                if nontree_edges[j][0] != precolored_verts[i]:
-                    continue
+        coloring_dict = {vert : color for (vert, color) in zip(precolored_verts, coloring)}
+        valid = True
+        for vert, color in coloring_dict.items():
+            if valid == False:
+                break
+            for e in nontree_edges:
+                if e[0] != vert:
+                    continue # only checking edges pointing away from vert
                 else:
-                    if correspondences[j][colorings[i]] == colorings[nontree_edges[j][1]]:
-                        pass #bad coloring
-            pass
-    pass
+                    if correspondence_dict[e][color] == coloring_dict[e[1]]:
+                        valid = False
+                        break
+        if valid:
+            yield coloring_dict
 
-def num_colorings(k, tree, nontree_edges):
-    colorings = 0
-    for correspondences in it.product(it.permutations(k), repeat=len(nontree_edges)):
+def correspondence_colorable(k, tree, nontree_edges):
+    for correspondences in it.product(it.permutations(range(k)), repeat=len(nontree_edges)):
         for precoloring in valid_precolorings(k, nontree_edges, correspondences):
-            colorings += precolored_tree(k, tree, precoloring)
-    return colorings
+            if precolored_tree(k, tree, precoloring) == 0:
+                return False
+    return True
+
+def bad_correspondences(k, tree, nontree_edges):
+    for correspondences in it.product(it.permutations(range(k)), repeat=len(nontree_edges)):
+        bad = False
+        for precoloring in valid_precolorings(k, nontree_edges, correspondences):
+            if bad:
+                break
+            if precolored_tree(k, tree, precoloring) == 0:
+                bad = True
+        if bad:
+            yield correspondences
+
+def num_bad_correspondences(k, tree, nontree_edges):
+    num = 0
+    for correspondences in it.product(it.permutations(range(k)), repeat=len(nontree_edges)):
+        bad = False
+        for precoloring in valid_precolorings(k, nontree_edges, correspondences):
+            if bad:
+                break
+            if precolored_tree(k, tree, precoloring) == 0:
+                bad = True
+        if bad:
+            num += 1
+    return num
+
+# generates tree, nontree_edges for multipartite balanced graph consisting of m parts of size n
+def multipartite_graph(n, m):
+    pass
 
 print(colorings_vector(2, (1, ((2, ()), (3, ((4, ()),)))), {2: 0, 4: 1}))
 print(colorings_vector(2, (1, ((2, ()), (3, ((4, ()),)))), {2: 1, 4: 1}))
+print(num_bad_correspondences(2, (1, ((2, ()), (3, ((4, ()),)))), ((2,4),)))
+for correspondence in bad_correspondences(2, (1, ((2, ()), (3, ((4, ()),)))), ((2,4),)):
+    print(correspondence)
