@@ -55,7 +55,7 @@ def colorings_vector(k, tree, precolored_dict):
             vals.append(ways)
         if tree[0] in precolored_dict:
             # in this case we wasted time computing the other elements of vals, but I think it is not that big a deal
-            return tuple((vals[i] if i == precolored_dict[tree[1]] else 0) for i in range(k))
+            return tuple((vals[i] if i == precolored_dict[tree[0]] else 0) for i in range(k))
         else:
             return tuple(vals)
 
@@ -92,42 +92,83 @@ def valid_precolorings(k, nontree_edges, correspondences):
             yield coloring_dict
 
 def correspondence_colorable(k, tree, nontree_edges):
-    for correspondences in it.product(it.permutations(range(k)), repeat=len(nontree_edges)):
-        for precoloring in valid_precolorings(k, nontree_edges, correspondences):
-            if precolored_tree(k, tree, precoloring) == 0:
-                return False
+    for correspondences in it.product(it.permutations(range(k)), repeat=len(nontree_edges)): # for every correspondence
+        works = False
+        for precoloring in valid_precolorings(k, nontree_edges, correspondences): # there exists a valid precoloring that extends
+            if precolored_tree(k, tree, precoloring) != 0:
+                works = True
+                break
+        if not works:
+            return False
     return True
 
 def bad_correspondences(k, tree, nontree_edges):
     for correspondences in it.product(it.permutations(range(k)), repeat=len(nontree_edges)):
-        bad = False
+        good = False
         for precoloring in valid_precolorings(k, nontree_edges, correspondences):
-            if bad:
+            if precolored_tree(k, tree, precoloring) != 0:
+                good = True
                 break
-            if precolored_tree(k, tree, precoloring) == 0:
-                bad = True
-        if bad:
+        if not good:
             yield correspondences
 
 def num_bad_correspondences(k, tree, nontree_edges):
     num = 0
     for correspondences in it.product(it.permutations(range(k)), repeat=len(nontree_edges)):
-        bad = False
+        good = False
         for precoloring in valid_precolorings(k, nontree_edges, correspondences):
-            if bad:
-                break
-            if precolored_tree(k, tree, precoloring) == 0:
-                bad = True
-        if bad:
+            if precolored_tree(k, tree, precoloring) != 0:
+                good = True
+        if not good:
             num += 1
     return num
 
+# helper function for below
+def ptoi(j,i,n):
+    return j*n + i
+
 # generates tree, nontree_edges for multipartite balanced graph consisting of m parts of size n
 def multipartite_graph(n, m):
-    pass
+    children = []
+    for i in range(n):
+        temp_tup = ()
+        for j in range(m-1,1,-1): # stops at j = 2
+            temp = ptoi(j,i,n)
+            temp_tup = ((temp, temp_tup),)
+        if i != 0:
+            children.append((ptoi(1,i,n), ((ptoi(0,i,n), ()), *temp_tup)))
+        else:
+            children.append((ptoi(1,i,n), temp_tup))
+    tree = (ptoi(0,0,n), tuple(children))
+    # all other edges go in nontree_edges
+    nontree_edges_lst = []
+    for i in range(n):
+        for j in range(m):
+            for jp in range(j+2,m):
+                nontree_edges_lst.append((ptoi(j,i,n), ptoi(jp,i,n)))
+    for i in range(n):
+        for ip in range(n): 
+            if ip == i: # ip != i
+                continue
+            for j in range(m):
+                for jp in range(j+1,m): # jp > j
+                    if j == 0 and jp == 1 and i == 0:
+                        pass
+                    else:
+                        nontree_edges_lst.append((ptoi(j,i,n), ptoi(jp,ip,n)))
+    return (tree, tuple(nontree_edges_lst))
 
 print(colorings_vector(2, (1, ((2, ()), (3, ((4, ()),)))), {2: 0, 4: 1}))
 print(colorings_vector(2, (1, ((2, ()), (3, ((4, ()),)))), {2: 1, 4: 1}))
 print(num_bad_correspondences(2, (1, ((2, ()), (3, ((4, ()),)))), ((2,4),)))
 for correspondence in bad_correspondences(2, (1, ((2, ()), (3, ((4, ()),)))), ((2,4),)):
+    print(correspondence)
+print(multipartite_graph(2,4)[0])
+print(multipartite_graph(2,4)[1])
+print(" ")
+G = multipartite_graph(4,2)
+#print(correspondence_colorable(3, *G))
+print(G[1])
+#print(num_bad_correspondences(3, *G))
+for correspondence in bad_correspondences(3, *G):
     print(correspondence)

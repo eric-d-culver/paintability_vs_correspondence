@@ -98,8 +98,5 @@ def test_k(k, imin, imax, jmin, jmax):
             print(f_paintable_multipartite(k_for_all_verts(k, parts)))
 
 
-<<<<<<< HEAD
-test_k(3, 2, 8, 2, 8)
-=======
-print(paintability((4,7),5))
->>>>>>> 4b0423938aff54fa024c1b9ff7a72f0ad8507794
+#test_k(3, 2, 8, 2, 8)
+print(paintability((4,4),5))
