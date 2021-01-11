@@ -22,10 +22,19 @@
 # of the tree with that precoloring.
 
 import itertools as it
+import functools as ft
 
 #represent tree as a tuple (node_number, tuple_of_subtrees)
 
 # precolored vertices given by a dictionary with keys of node_numbers and values of colors
+
+# helper function for the below
+def basek(k, lst): # uses lst as digits of base k number
+    val = 0
+    for j in range(len(lst)):
+        val += lst[j]
+        val *= k
+    return val//k
 
 def colorings_vector(k, tree, precolored_dict):
     if tree[1] is ():
@@ -42,16 +51,19 @@ def colorings_vector(k, tree, precolored_dict):
         for subtree in tree[1]:
             children.append(colorings_vector(k, subtree, precolored_dict))
         vals = []
+        products = []
+        for colors in it.product(range(k), repeat=num_children):
+            prod = 1
+            for j in range(num_children):
+                prod *= children[j][colors[j]]
+            products.append(prod)
         for i in range(k):
             ways = 0
             for colors in it.product(range(k), repeat=num_children):
                 if i in colors:
                     continue
                 else:
-                    prod = 1
-                    for j in range(num_children):
-                        prod *= children[j][colors[j]]
-                    ways += prod
+                    ways += products[basek(k, colors)]
             vals.append(ways)
         if tree[0] in precolored_dict:
             # in this case we wasted time computing the other elements of vals, but I think it is not that big a deal
@@ -59,6 +71,7 @@ def colorings_vector(k, tree, precolored_dict):
         else:
             return tuple(vals)
 
+@ft.lru_cache(maxsize=None)
 def precolored_tree(k, tree, precolored):
     return sum(colorings_vector(k, tree, precolored))
 
@@ -70,6 +83,11 @@ def precolored_tree(k, tree, precolored):
 # color 2 on u is matched with color 3 on v, and
 # color 3 on u is matched with color 1 on v.
 # direction of tuple for edge gives direction of permutation for correspondence.
+
+# helper class for below
+class hashabledict(dict):
+    def __hash__(self):
+        return hash(tuple(sorted(self.items())))
 
 def valid_precolorings(k, nontree_edges, correspondences):
     precolored_verts = list(set(e[0] for e in nontree_edges).union(set(e[1] for e in nontree_edges)))
@@ -89,7 +107,7 @@ def valid_precolorings(k, nontree_edges, correspondences):
                         valid = False
                         break
         if valid:
-            yield coloring_dict
+            yield hashabledict(coloring_dict)
 
 def correspondence_colorable(k, tree, nontree_edges):
     for correspondences in it.product(it.permutations(range(k)), repeat=len(nontree_edges)): # for every correspondence
@@ -158,17 +176,27 @@ def multipartite_graph(n, m):
                         nontree_edges_lst.append((ptoi(j,i,n), ptoi(jp,ip,n)))
     return (tree, tuple(nontree_edges_lst))
 
-print(colorings_vector(2, (1, ((2, ()), (3, ((4, ()),)))), {2: 0, 4: 1}))
-print(colorings_vector(2, (1, ((2, ()), (3, ((4, ()),)))), {2: 1, 4: 1}))
-print(num_bad_correspondences(2, (1, ((2, ()), (3, ((4, ()),)))), ((2,4),)))
-for correspondence in bad_correspondences(2, (1, ((2, ()), (3, ((4, ()),)))), ((2,4),)):
-    print(correspondence)
-print(multipartite_graph(2,4)[0])
-print(multipartite_graph(2,4)[1])
-print(" ")
-G = multipartite_graph(4,2)
-#print(correspondence_colorable(3, *G))
-print(G[1])
-#print(num_bad_correspondences(3, *G))
-for correspondence in bad_correspondences(3, *G):
-    print(correspondence)
+test=False
+
+if test:
+    print(basek(3,[0,1,2]))
+    print(0*3*3 + 1*3 + 2)
+    print(colorings_vector(2, (1, ((2, ()), (3, ((4, ()),)))), {2: 0, 4: 1}))
+    print(colorings_vector(2, (1, ((2, ()), (3, ((4, ()),)))), {2: 1, 4: 1}))
+    print(num_bad_correspondences(2, (1, ((2, ()), (3, ((4, ()),)))), ((2,4),)))
+    for correspondence in bad_correspondences(2, (1, ((2, ()), (3, ((4, ()),)))), ((2,4),)):
+        print(correspondence)
+    print(multipartite_graph(2,4)[0])
+    print(multipartite_graph(2,4)[1])
+    print(" ")
+else:
+    G = multipartite_graph(5,2)
+    k = 3
+    #print(correspondence_colorable(k, *G))
+    print(G[1])
+    #print(num_bad_correspondences(k, *G))
+    num = 0
+    for correspondence in bad_correspondences(k, *G):
+        print(correspondence)
+        num += 1
+    print(num)
