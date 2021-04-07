@@ -9,11 +9,37 @@ from itertools import count, filterfalse
 
 num_considered = 0
 
+# tree is a tuple, first element is label of root, second element is list of subtrees
+# empty tree is empty tuple
+
 # helper function
 @lru_cache(maxsize=None)
-def neighbors(v, graph):
+def tree_neighbors(v, tree):
     res = []
-    for x,y in graph:
+    if tree[0] == v: # v is root
+        for u, _ in tree[1]:
+            res.append(u)
+        return res
+    for u, subsubtrees in tree[1]:
+        if u == v: # v is root of immediate subtree
+            res = [tree[0]]
+            for w, _ in subsubtrees:
+                res.append(w)
+            return res
+    # else v is possibly lower in the tree
+    for x in tree[1]:
+        res = tree_neighbors(v, x)
+        if len(res) != 0:
+            return res
+    return [] # no subtrees
+
+# helper function
+@lru_cache(maxsize=None)
+def neighbors(v, tree, nontree):
+    res = []
+    for x in tree_neighbors(v, tree):
+        res.append((x, 0))
+    for x,y in nontree:
         if x == v:
             res.append((y, -1))
         elif y == v:
@@ -22,9 +48,15 @@ def neighbors(v, graph):
 
 # helper function
 @lru_cache(maxsize=None)
-def vertices(graph):
+def tree_vertices(tree):
+    return [tree[0]] + sum(map(tree_vertices, tree[1]), [])
+
+# helper function
+@lru_cache(maxsize=None)
+def vertices(tree, nontree):
     res = []
-    for x,y in graph:
+    res = res + tree_vertices(tree)
+    for x,y in nontree:
         if x not in res:
             res.append(x)
         if y not in res:
@@ -56,11 +88,13 @@ def color_choices(c_uv, orient, perm, k):
             return everything_but(perm[c_uv], k) # everything except what c_uv corresponds to
         else: # things that correspond to something
             return list(perm)
-    else: # orient == -1
+    elif orient == -1:
         if c_uv in perm:
             return everything_but(perm.index(c_uv), k) # everything except what c_uv corresponds to
         else: # things that correspond to something
             return list(range(len(perm)))
+    elif orient == 0:
+        return everything_but(c_uv, k) # everything but c_uv
 
 # c_u, c_v, colors of endpoints
 # orient does perm go uv or vu
@@ -72,22 +106,25 @@ def color_test(c_u, c_v, orient, perm):
             return perm[c_u] != c_v # so it can't be c_v
         else: # c_u does not correspond to anything
             return c_v in perm # so c_v should correspond to something
-    else: # orient == -1
+    elif orient == -1:
         if c_v < len(perm): # c_v corresponds to something
             return perm[c_v] != c_u # so it can't be c_u
         else: # c_v does not correspond to anything 
             return c_u in perm # so c_u should correspond to something
+    elif orient == 0:
+        return c_u != c_v
 
 
 # takes graph, partial correspondence, partial coloring, and list of uncolored vertex and attempts to extend coloring to the uncolored vertices
-# graph: list of edges as pairs
+# tree: tuple of root and list of subtrees (empty tree is empty tuple)
+# nontree: list of edges as pairs
 # partial correspondence: dict of tuples, keys are edges, values are tuples giving partial correspondence for that edge
 # partial coloring: dict of number, keys are vertices (also numbers), values are color of that vertex
 # uncolored: list of uncolored vertices
 # colors: dictionary giving number of colors available at each vertex
 # returns extended coloring if exists, else returns None
 # algorithm works by attempting to extend coloring to first element of list, then recursively calling itself on rest of list
-def extend_coloring(graph, correspondences, coloring, uncolored, colors):
+def extend_coloring(tree, nontree, correspondences, coloring, uncolored, colors):
     if len(uncolored) == 0: 
         # if everything is colored, we are done
         return coloring
@@ -98,21 +135,25 @@ def extend_coloring(graph, correspondences, coloring, uncolored, colors):
     for i in range(colors[vertex]):
         # test if i is good color for vertex
         good_color = True
-        for u, orient in neighbors(vertex, graph):
+        for u, orient in neighbors(vertex, tree, nontree):
             if u in coloring:
                 if orient == 1:
                     if not color_test(coloring[u], i, orient, correspondences[(u, vertex)]):
                         good_color = False
                         break
-                else: # orient == -1
+                elif orient == -1:
                     if not color_test(i, coloring[u], orient, correspondences[(vertex, u)]):
+                        good_color = False
+                        break
+                elif orient == 0:
+                    if not color_test(coloring[u], i, orient, []):
                         good_color = False
                         break
         if good_color:
             # i is good color for vertex
             new_coloring[vertex] = i
             # recursively color rest of graph
-            extended_coloring = extend_coloring(graph, correspondences, new_coloring, remaining, colors)
+            extended_coloring = extend_coloring(tree, nontree, correspondences, new_coloring, remaining, colors)
             if extended_coloring is not None:
                 return extended_coloring
     return None
@@ -139,11 +180,11 @@ def extend_coloring(graph, correspondences, coloring, uncolored, colors):
 # if returns None, step_correspondence on current edge and recurse again (so really we want a loop, meaning we need a list of the possible add_correspondences)
 # if they all return None, return None yourself
 
-def bad_correspondence(graph, correspondences, edges, colors):
+def bad_correspondence(tree, nontree, correspondences, edges, colors):
     #print("Considering correspondence", correspondences)
     # shortcut if some edge of correspondences is ()
     if all(partial != () for partial in correspondences):
-        test_coloring = extend_coloring(graph, correspondences, dict(), vertices(graph), colors)
+        test_coloring = extend_coloring(tree, nontree, correspondences, dict(), vertices(tree, nontree), colors)
         if test_coloring is not None:
             print("Coloring", test_coloring, "for correspondences", correspondences)
             return None
@@ -160,41 +201,71 @@ def bad_correspondence(graph, correspondences, edges, colors):
         # current edge will be full
         remaining = edges[1:]
     new_correspondences = dict(correspondences)
-    for perm in add_correspondence_loop(correspondences[current_edge], colors):
+    for perm in add_correspondence_loop(correspondences[current_edge], colors[current_edge[0]]):
         print("Let", current_edge, "have correspondence", perm)
         new_correspondences[current_edge] = perm
-        test_bad_correspondence = bad_correspondence(graph, new_correspondences, remaining, colors)
+        test_bad_correspondence = bad_correspondence(tree, nontree, new_correspondences, remaining, colors)
         if test_bad_correspondence is not None:
             return test_bad_correspondence
     return None
 
-def bad_correspondence_init(graph, colors):
+def bad_correspondence_init(tree, nontree, colors):
     correspondences = dict()
-    for e in graph:
+    for e in nontree:
         correspondences[e] = ()
-    return bad_correspondence(graph, correspondences, graph, colors)
+    return bad_correspondence(tree, nontree, correspondences, nontree, colors)
 
-def all_colors_same(graph, num):
+def all_colors_same(tree, nontree, num):
     res = dict()
-    for i in vertices(graph):
+    for i in vertices(tree, nontree):
         res[i] = num
     return res
 
-def Mycielski(graph):
-    # assumes vertices of graph are numbered 0 through n-1
-    n = len(vertices(graph))
-    res = list(graph)
-    for i, j in graph:
-        res.append((i, n+j))
-        res.append((i+n, j))
-    for k in range(n, n+n):
-        res.append((k, n+n))
-    return tuple(res)
+# vertices is list of vertices
+# edges is list of edges
+def spanning_trees_loop(vertices, edges):
+    pass
+
+# following function has not been updated to handle spanning trees
+#def Mycielski(graph):
+    ## assumes vertices of graph are numbered 0 through n-1
+    #n = len(vertices(graph))
+    #res = list(graph)
+    #for i, j in graph:
+        #res.append((i, n+j))
+        #res.append((i+n, j))
+    #for k in range(n, n+n):
+        #res.append((k, n+n))
+    #return tuple(res)
 
 #print(Mycielski(Mycielski(((0,1),))))
 
-G = Mycielski(Mycielski(Mycielski(((0,1),))))
+#G = Mycielski(Mycielski(Mycielski(((0,1),))))
+
+#print(bad_correspondence_init(G, all_colors_same(G, 4)))
+
+# example: K4 - e, or C4 + e, its the random graph!
+G_star_t = (1, ((2, ()), (3, ()), (4, ())))
+G_star_nt = ((2,4), (3,4))
+G_path_t = (1, ((3, ()), (2, ((4, ()),))))
+G_path_nt = ((1,4), (3,4))
+G_zig_t = (1, ((3, ()), (4, ((2, ()),))))
+G_zig_nt = ((1,2), (3,4))
+
+print("G is K4 - e or C4 + e.")
+print("Using star tree:")
+print(bad_correspondence_init(G_star_t, G_star_nt, all_colors_same(G_star_t, G_star_nt, 3)))
+print("Using path tree:")
+print(bad_correspondence_init(G_path_t, G_path_nt, all_colors_same(G_path_t, G_path_nt, 3)))
+print("Using zigzag tree:")
+print(bad_correspondence_init(G_zig_t, G_zig_nt, all_colors_same(G_zig_t, G_zig_nt, 3)))
 
 
-print(bad_correspondence_init(G, all_colors_same(G, 4)))
+# example K5 - e, which is still planar, so it should be 5 correspondence colorable, but is it 4? (Should be by Brooks' type result) Is it 3?
+H_star = [(1, ((2, ()), (3, ()), (4, ()), (5, ()))), ((2,3), (3,4), (4,5), (2,5), (3,5))]
+
+
+print("H is K5 - e")
+print("Using star tree:")
+print(bad_correspondence_init(H_star[0], H_star[1], all_colors_same(H_star[0], H_star[1], 4)))
 
