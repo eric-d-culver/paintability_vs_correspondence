@@ -1,5 +1,13 @@
 #!/usr/bin/python3
 
+# takes a filename, reads the file line by line interpreting each as a graph6 string, yields the adjacency list of each graph in turn
+def graph6_file(filename):
+    fin = open(filename, 'r')
+    for line in fin:
+        if line[0] == '<':
+            continue
+        yield graph6_to_dict(line[:-1])
+
 # takes a graph6 format string representing a graph and outputs a dictionary which is the adjacency list of the graph (i.e., res[v] is a list of the neighbors of v)
 def graph6_to_dict(g6_str):
     if len(g6_str) == 0:
@@ -78,3 +86,6 @@ def pad_with_zeroes(bin_list, length):
     return bin_list
 
 #print(graph6_to_dict("DQ{"))
+
+#for graph in graph6_file("geng_5.txt"):
+    #print(graph)
