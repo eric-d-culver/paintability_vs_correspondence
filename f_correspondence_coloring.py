@@ -7,6 +7,8 @@
 from functools import lru_cache
 from itertools import count, filterfalse
 
+from nauty_utils import graph6_file, graph6_to_dict
+
 num_considered = 0
 
 # tree is a tuple, first element is label of root, second element is list of subtrees
@@ -223,8 +225,47 @@ def all_colors_same(tree, nontree, num):
 
 # vertices is list of vertices
 # edges is list of edges
+# this function may need to wait for C version of this program
 def spanning_trees_loop(vertices, edges):
     pass
+
+# helper function
+def gen_spanning_tree_recurse(graph, verts_in_tree, vert_to_expand, parent):
+    nbs = graph[vert_to_expand]
+    nontree = []
+    subtrees = []
+    added_nbs = []
+    for j in nbs:
+        if j in verts_in_tree: 
+            if j is not parent: # adding this edge would make a loop, so it must a nontree edge
+                nontree.append((vert_to_expand, j))
+        else: # greedily adds all nbs to tree unless doing so would create a loop
+            added_nbs.append(j)
+            verts_in_tree.append(j)
+    for j in nbs:
+        if j is not parent and j in added_nbs: # we need to recurse on all the nbs which are now part of the tree
+            subtree_j, nontree_j = gen_spanning_tree_recurse(graph, verts_in_tree, j, vert_to_expand)
+            nontree += nontree_j
+            subtrees.append(subtree_j)
+    tree = (vert_to_expand, tuple(subtrees))
+    return tree, nontree
+
+# graph is dictionary with vertices as key, and values are list of neighbors
+# output is a spanning tree and list of nontree edges suitable for plugging right into bad_correspondence_init
+# function does not check for graph to be connected. If not so, tree and nontree will only cover one component
+def gen_spanning_tree(graph):
+    verts_in_tree = [0] # always has 0 as root of tree
+    tree, nontree = gen_spanning_tree_recurse(graph, verts_in_tree, 0, None)
+    # nontree will contain each edge both ways, filter that out
+    removes = []
+    for pair in nontree:
+        if pair in removes:
+            continue
+        else:
+            u, v = pair
+            removes.append((v,u))
+    nontree_clean = tuple(e for e in nontree if e not in removes)
+    return tree, nontree_clean
 
 # following function has not been updated to handle spanning trees
 #def Mycielski(graph):
@@ -245,27 +286,56 @@ def spanning_trees_loop(vertices, edges):
 #print(bad_correspondence_init(G, all_colors_same(G, 4)))
 
 # example: K4 - e, or C4 + e, its the random graph!
-G_star_t = (1, ((2, ()), (3, ()), (4, ())))
-G_star_nt = ((2,4), (3,4))
-G_path_t = (1, ((3, ()), (2, ((4, ()),))))
-G_path_nt = ((1,4), (3,4))
-G_zig_t = (1, ((3, ()), (4, ((2, ()),))))
-G_zig_nt = ((1,2), (3,4))
+#G_star_t = (1, ((2, ()), (3, ()), (4, ())))
+#G_star_nt = ((2,4), (3,4))
+#G_path_t = (1, ((3, ()), (2, ((4, ()),))))
+#G_path_nt = ((1,4), (3,4))
+#G_zig_t = (1, ((3, ()), (4, ((2, ()),))))
+#G_zig_nt = ((1,2), (3,4))
+#
+#print("G is K4 - e or C4 + e.")
+#print("Using star tree:")
+#print(bad_correspondence_init(G_star_t, G_star_nt, all_colors_same(G_star_t, G_star_nt, 3)))
+#print("Using path tree:")
+#print(bad_correspondence_init(G_path_t, G_path_nt, all_colors_same(G_path_t, G_path_nt, 3)))
+#print("Using zigzag tree:")
+#print(bad_correspondence_init(G_zig_t, G_zig_nt, all_colors_same(G_zig_t, G_zig_nt, 3)))
+#
+#
+## example K5 - e, which is still planar, so it should be 5 correspondence colorable, but is it 4? (Should be by Brooks' type result) Is it 3?
+#H_star = [(1, ((2, ()), (3, ()), (4, ()), (5, ()))), ((2,3), (3,4), (4,5), (2,5), (3,5))]
+#
+#print("H is K5 - e")
+#print("Using star tree:")
+#print(bad_correspondence_init(H_star[0], H_star[1], all_colors_same(H_star[0], H_star[1], 4)))
 
-print("G is K4 - e or C4 + e.")
-print("Using star tree:")
-print(bad_correspondence_init(G_star_t, G_star_nt, all_colors_same(G_star_t, G_star_nt, 3)))
-print("Using path tree:")
-print(bad_correspondence_init(G_path_t, G_path_nt, all_colors_same(G_path_t, G_path_nt, 3)))
-print("Using zigzag tree:")
-print(bad_correspondence_init(G_zig_t, G_zig_nt, all_colors_same(G_zig_t, G_zig_nt, 3)))
+file_or_graph = True
 
-
-# example K5 - e, which is still planar, so it should be 5 correspondence colorable, but is it 4? (Should be by Brooks' type result) Is it 3?
-H_star = [(1, ((2, ()), (3, ()), (4, ()), (5, ()))), ((2,3), (3,4), (4,5), (2,5), (3,5))]
-
-
-print("H is K5 - e")
-print("Using star tree:")
-print(bad_correspondence_init(H_star[0], H_star[1], all_colors_same(H_star[0], H_star[1], 4)))
-
+if file_or_graph:
+    for graph in graph6_file("geng_7.txt"):
+        tree, nontree = gen_spanning_tree(graph)
+        print(f"Graph: {graph}")
+        print(f"Tree: {tree}, Nontree: {nontree}")
+        k = 3
+        while k <= 7:
+            thing = bad_correspondence_init(tree, nontree, all_colors_same(tree, nontree, k))
+            if thing is None:
+                break
+            print(f"Bad Correspondence for {k} colors: {thing}")
+            k += 1
+        print(f"Correspondence coloring number {k}")
+        print("")
+else:
+    graph = graph6_to_dict("FCZvo")
+    tree, nontree = gen_spanning_tree(graph)
+    print(f"Graph: {graph}")
+    print(f"Tree: {tree}, Nontree: {nontree}")
+    k = 3
+    while k <= 7:
+        thing = bad_correspondence_init(tree, nontree, all_colors_same(tree, nontree, k))
+        if thing is None:
+            break
+        print(f"Bad Correspondence for {k} colors: {thing}")
+        k += 1
+    print(f"Correspondence coloring number {k}")
+    print("")
