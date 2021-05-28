@@ -188,7 +188,8 @@ def bad_correspondence(tree, nontree, correspondences, edges, colors):
     if all(partial != () for partial in correspondences):
         test_coloring = extend_coloring(tree, nontree, correspondences, dict(), vertices(tree, nontree), colors)
         if test_coloring is not None:
-            print("Coloring", test_coloring, "for correspondences", correspondences)
+            if verbose:
+                print("Coloring", test_coloring, "for correspondences", correspondences)
             return None
     # no coloring possible or some edge has no correspondences
     if len(edges) == 0:
@@ -204,7 +205,8 @@ def bad_correspondence(tree, nontree, correspondences, edges, colors):
         remaining = edges[1:]
     new_correspondences = dict(correspondences)
     for perm in add_correspondence_loop(correspondences[current_edge], colors[current_edge[0]]):
-        print("Let", current_edge, "have correspondence", perm)
+        if verbose:
+            print("Let", current_edge, "have correspondence", perm)
         new_correspondences[current_edge] = perm
         test_bad_correspondence = bad_correspondence(tree, nontree, new_correspondences, remaining, colors)
         if test_bad_correspondence is not None:
@@ -309,33 +311,23 @@ def gen_spanning_tree(graph):
 #print("Using star tree:")
 #print(bad_correspondence_init(H_star[0], H_star[1], all_colors_same(H_star[0], H_star[1], 4)))
 
-file_or_graph = True
+verbose = False
+n = 6
 
-if file_or_graph:
-    for graph in graph6_file("geng_7.txt"):
-        tree, nontree = gen_spanning_tree(graph)
+for graph, graph6_str, chromatic_num in graph6_file("choos_6.txt"):
+    tree, nontree = gen_spanning_tree(graph)
+    if verbose:
         print(f"Graph: {graph}")
         print(f"Tree: {tree}, Nontree: {nontree}")
-        k = 3
-        while k <= 7:
-            thing = bad_correspondence_init(tree, nontree, all_colors_same(tree, nontree, k))
-            if thing is None:
-                break
-            print(f"Bad Correspondence for {k} colors: {thing}")
-            k += 1
-        print(f"Correspondence coloring number {k}")
-        print("")
-else:
-    graph = graph6_to_dict("FCZvo")
-    tree, nontree = gen_spanning_tree(graph)
-    print(f"Graph: {graph}")
-    print(f"Tree: {tree}, Nontree: {nontree}")
-    k = 3
-    while k <= 7:
+    k = int(chromatic_num)
+    while k <= n:
         thing = bad_correspondence_init(tree, nontree, all_colors_same(tree, nontree, k))
         if thing is None:
             break
-        print(f"Bad Correspondence for {k} colors: {thing}")
+        if verbose:
+            print(f"Bad Correspondence for {k} colors: {thing}")
         k += 1
-    print(f"Correspondence coloring number {k}")
-    print("")
+    if verbose:
+        print(f"Correspondence coloring number {k}")
+        print("")
+    print(f"{graph6_str} {k}")

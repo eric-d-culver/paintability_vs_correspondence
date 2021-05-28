@@ -6,7 +6,9 @@ def graph6_file(filename):
     for line in fin:
         if line[0] == '<':
             continue
-        yield graph6_to_dict(line[:-1])
+        graph6, *extra_info = line.split()
+        #print(graph6_to_dict(graph6), graph6, *extra_info)
+        yield (graph6_to_dict(graph6), graph6, *extra_info)
 
 # takes a graph6 format string representing a graph and outputs a dictionary which is the adjacency list of the graph (i.e., res[v] is a list of the neighbors of v)
 def graph6_to_dict(g6_str):
@@ -86,6 +88,9 @@ def pad_with_zeroes(bin_list, length):
     return bin_list
 
 #print(graph6_to_dict("DQ{"))
+
+#f = graph6_file("geng_6.txt")
+#next(f)
 
 #for graph in graph6_file("geng_5.txt"):
     #print(graph)
