@@ -311,16 +311,18 @@ def gen_spanning_tree(graph):
 #print("Using star tree:")
 #print(bad_correspondence_init(H_star[0], H_star[1], all_colors_same(H_star[0], H_star[1], 4)))
 
-verbose = False
-n = 6
+verbose = True
+n = 7
 
-for graph, graph6_str, chromatic_num in graph6_file("choos_6.txt"):
+for graph, graph6_str, choos, at_num, ub in graph6_file("choos_7.txt"):
     tree, nontree = gen_spanning_tree(graph)
     if verbose:
         print(f"Graph: {graph}")
         print(f"Tree: {tree}, Nontree: {nontree}")
-    k = int(chromatic_num)
-    while k <= n:
+    at_num = int(at_num)
+    k = int(choos)
+    ub = int(ub)
+    while k < ub: # when k == ub, we know it is correspondence coloring number
         thing = bad_correspondence_init(tree, nontree, all_colors_same(tree, nontree, k))
         if thing is None:
             break
@@ -330,4 +332,4 @@ for graph, graph6_str, chromatic_num in graph6_file("choos_6.txt"):
     if verbose:
         print(f"Correspondence coloring number {k}")
         print("")
-    print(f"{graph6_str} {k}")
+    print(f"{graph6_str} {at_num} {k}")

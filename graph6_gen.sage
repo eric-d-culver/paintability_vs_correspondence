@@ -1,5 +1,5 @@
 
-n = 6
+n = 8
 
 graph6_strings = []
 
@@ -7,12 +7,18 @@ graph6_strings = []
 for G in graphs(n):
     if G.is_connected() and min(G.degree_iterator()) >= 3:
 	Delta = max(G.degree_iterator())
-        if Delta > 3:
+        c = max(G.cores()) + 1 # coloring number of graph
+        ub = min(c, Delta)
+        if ub > 3: 
 	    omega = G.clique_number()
-            if omega < Delta:
+            mad = G.maximum_average_degree()
+            lb = max(omega, ceil(mad/2)) # AT(G) > mad(G)/2
+            if ub - lb > 1: # want gap of at least 2
                 #graph6_strings.append(G.graph6_string())
                 i = G.chromatic_number()
-                print G.graph6_string(), i
+                lb = max(i, lb)
+                if ub - lb > 1: # want gap of at least 2
+                    print G.graph6_string(), lb, i, ub
 
 # extract the subgraph minimal graphs of this set 
 # NOTE: subgraph_search in Sage is slow, so disable if too slow

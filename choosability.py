@@ -1084,26 +1084,55 @@ def assignmentCheck(G,CAtocopy):
     return c     # At this point, i == n.
 
 
-#n = 6
-#fin = open("geng_6.txt")
+n = 8
+fin = open("geng_8.txt")
 
-#for line in fin:
-    #if line[0] == "<":
-        #continue
-    #graph6, chromatic_num = line.split()
-    #G = Graph(graph6)
-    #chromatic_num = int(chromatic_num)
-    #for i in xrange(chromatic_num, n):
+for line in fin:
+    if line[0] == "<":
+        continue
+    graph6, lb, chromatic_num, ub = line.split()
+    G = Graph(graph6)
+    chromatic_num = int(chromatic_num)
+    ub = int(ub)
+    lb = int(lb)
+    for i in xrange(lb, ub+1):
+        f = [i]*n
+        res = CNS(G,f)
+        if res:
+            at_num = i
+            break
+    if ub - at_num <= 1: # want gap of 2
+        continue
+    for i in xrange(chromatic_num, ub+1):
+        f = [i]*n
+        res = fChoosable(G,f)
+        if res[0]:
+            print graph6, i, at_num, ub
+            break
+
+#family = ["E`~o", "GwC^~w", "I~?GW^~~o", "K~{?GKF@~~~}", "M~~w?CB?wF_^~~~~?", "O~~~w?@?WB_N?^?^~~~~}", "Q~~~~{??G@_F?N?N_Fw@~~~~~~o", "S~~~~~~???_B?F?F_Bw?~?F{?^~~~~~~w", "U~~~~~~~w??@?B?B_@w?^?B{?Nw?^w?^~~~~~~~o"]
+
+#m = 2
+#for string in family:
+    #n = 2*m + 2
+    #lb = int(m*(m+3)/(2*(m+1)))
+    #G = Graph(string)
+    #print "m =", m
+    #print "n =", n
+    #for i in xrange(lb,n):
         #f = [i]*n
-        #res = fChoosable(G,f)
-        #if res[0]:
-            #print graph6, i
+        #res = CNS(G,f,verbosity = 8)
+        #if res:
+            #print i
+            #print m+1
             #break
+    #m += 1
 
-G = Graph("HhEKCD~")
-for i in xrange(3,9):
-    f = [i]*9
-    res = fChoosable(G,f,verbosity = 1)
-    if res[0]:
-        print i
-        break
+#n = 7
+#G = Graph("F?~v_")
+#for i in xrange(2,n):
+    #f = [i]*n
+    #res = CNS(G,f,verbosity=8)
+    #if res:
+        #print i
+        #break
