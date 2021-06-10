@@ -10,6 +10,9 @@ from itertools import count, filterfalse
 from nauty_utils import graph6_file, graph6_to_dict
 
 num_considered = 0
+branch_depth = 5
+job_number = 5
+total_jobs = 1000
 
 # tree is a tuple, first element is label of root, second element is list of subtrees
 # empty tree is empty tuple
@@ -182,15 +185,15 @@ def extend_coloring(tree, nontree, correspondences, coloring, uncolored, colors)
 # if returns None, step_correspondence on current edge and recurse again (so really we want a loop, meaning we need a list of the possible add_correspondences)
 # if they all return None, return None yourself
 
-def bad_correspondence(tree, nontree, correspondences, edges, colors):
+def bad_correspondence(tree, nontree, correspondences, edges, colors, depth, count):
     #print("Considering correspondence", correspondences)
     # shortcut if some edge of correspondences is ()
     if all(partial != () for partial in correspondences):
         test_coloring = extend_coloring(tree, nontree, correspondences, dict(), vertices(tree, nontree), colors)
         if test_coloring is not None:
-            if verbose:
+            if verbosity > 1:
                 print("Coloring", test_coloring, "for correspondences", correspondences)
-            return None
+            return None, count
     # no coloring possible or some edge has no correspondences
     if len(edges) == 0:
         return correspondences
@@ -204,13 +207,14 @@ def bad_correspondence(tree, nontree, correspondences, edges, colors):
         # current edge will be full
         remaining = edges[1:]
     new_correspondences = dict(correspondences)
-    for perm in add_correspondence_loop(correspondences[current_edge], colors[current_edge[0]]):
-        if verbose:
-            print("Let", current_edge, "have correspondence", perm)
-        new_correspondences[current_edge] = perm
-        test_bad_correspondence = bad_correspondence(tree, nontree, new_correspondences, remaining, colors)
-        if test_bad_correspondence is not None:
-            return test_bad_correspondence
+    if depth == branch_depth and count % total_jobs == job_number:
+        for perm in add_correspondence_loop(correspondences[current_edge], colors[current_edge[0]]):
+            if verbosity > 2:
+                print("Let", current_edge, "have correspondence", perm)
+            new_correspondences[current_edge] = perm
+            test_bad_correspondence, count = bad_correspondence(tree, nontree, new_correspondences, remaining, colors, depth+1, count+1)
+            if test_bad_correspondence is not None:
+                return test_bad_correspondence, count
     return None
 
 def bad_correspondence_init(tree, nontree, colors):
@@ -311,13 +315,14 @@ def gen_spanning_tree(graph):
 #print("Using star tree:")
 #print(bad_correspondence_init(H_star[0], H_star[1], all_colors_same(H_star[0], H_star[1], 4)))
 
-verbose = True
+verbosity = 1
 n = 7
 
 for graph, graph6_str, choos, at_num, ub in graph6_file("choos_7.txt"):
     tree, nontree = gen_spanning_tree(graph)
-    if verbose:
+    if verbosity > 0:
         print(f"Graph: {graph}")
+    if verbosity > 1:
         print(f"Tree: {tree}, Nontree: {nontree}")
     at_num = int(at_num)
     k = int(choos)
@@ -326,10 +331,10 @@ for graph, graph6_str, choos, at_num, ub in graph6_file("choos_7.txt"):
         thing = bad_correspondence_init(tree, nontree, all_colors_same(tree, nontree, k))
         if thing is None:
             break
-        if verbose:
+        if verbosity > 0:
             print(f"Bad Correspondence for {k} colors: {thing}")
         k += 1
-    if verbose:
+    if verbosity > 0:
         print(f"Correspondence coloring number {k}")
         print("")
     print(f"{graph6_str} {at_num} {k}")
