@@ -207,15 +207,34 @@ def bad_correspondence(tree, nontree, correspondences, edges, colors, depth, cou
         # current edge will be full
         remaining = edges[1:]
     new_correspondences = dict(correspondences)
-    if depth == branch_depth and count % total_jobs == job_number:
+    if depth < branch_depth: # keep going, keep counting
+        count = count+1 # for the current node
         for perm in add_correspondence_loop(correspondences[current_edge], colors[current_edge[0]]):
             if verbosity > 2:
                 print("Let", current_edge, "have correspondence", perm)
             new_correspondences[current_edge] = perm
-            test_bad_correspondence, count = bad_correspondence(tree, nontree, new_correspondences, remaining, colors, depth+1, count+1)
+            test_bad_correspondence, count = bad_correspondence(tree, nontree, new_correspondences, remaining, colors, depth+1, count)
             if test_bad_correspondence is not None:
                 return test_bad_correspondence, count
-    return None
+    elif depth == branch_depth and count % total_jobs == job_number: # keep going, don't count below here
+        count = count+1 # for the current node
+        for perm in add_correspondence_loop(correspondences[current_edge], colors[current_edge[0]]):
+            if verbosity > 2:
+                print("Let", current_edge, "have correspondence", perm)
+            new_correspondences[current_edge] = perm
+            test_bad_correspondence, _ = bad_correspondence(tree, nontree, new_correspondences, remaining, colors, depth+1, 0)
+            if test_bad_correspondence is not None:
+                return test_bad_correspondence, count
+    elif depth > branch_depth: # keep going if you got here, but don't count
+        for perm in add_correspondence_loop(correspondences[current_edge], colors[current_edge[0]]):
+            if verbosity > 2:
+                print("Let", current_edge, "have correspondence", perm)
+            new_correspondences[current_edge] = perm
+            test_bad_correspondence, _ = bad_correspondence(tree, nontree, new_correspondences, remaining, colors, depth+1, 0)
+            if test_bad_correspondence is not None:
+                return test_bad_correspondence, count
+    # we get here if no bad_correspondence found or if branch_depth hit but we aren't continuing
+    return None, count
 
 def bad_correspondence_init(tree, nontree, colors):
     correspondences = dict()
