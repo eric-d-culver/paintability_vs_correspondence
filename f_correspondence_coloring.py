@@ -10,9 +10,9 @@ from itertools import count, filterfalse
 from nauty_utils import graph6_file, graph6_to_dict
 
 num_considered = 0
-branch_depth = 5
-job_number = 5
-total_jobs = 1000
+branch_depth = None
+job_number = 0
+total_jobs = 1
 
 # tree is a tuple, first element is label of root, second element is list of subtrees
 # empty tree is empty tuple
@@ -260,6 +260,7 @@ def gen_spanning_tree_recurse(graph, verts_in_tree, vert_to_expand, parent):
 # output is a spanning tree and list of nontree edges suitable for plugging right into bad_correspondence_init
 # function does not check for graph to be connected. If not so, tree and nontree will only cover one component
 def gen_spanning_tree(graph):
+    global branch_depth
     verts_in_tree = [0] # always has 0 as root of tree
     tree, nontree = gen_spanning_tree_recurse(graph, verts_in_tree, 0, None)
     # nontree will contain each edge both ways, filter that out
@@ -271,6 +272,7 @@ def gen_spanning_tree(graph):
             u, v = pair
             removes.append((v,u))
     nontree_clean = tuple(e for e in nontree if e not in removes)
+    branch_depth = len(nontree_clean)
     return tree, nontree_clean
 
 # following function has not been updated to handle spanning trees
