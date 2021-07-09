@@ -1102,8 +1102,9 @@ for line in fin:
             at_num = i
             break
     if ub - at_num <= 1: # want gap of 2
+        #print "Too small a gap", at_num, ub
         continue
-    for i in xrange(chromatic_num, ub+1):
+    for i in xrange(chromatic_num, at_num+1):
         f = [i]*n
         res = fChoosable(G,f)
         if res[0]:

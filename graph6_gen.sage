@@ -8,7 +8,7 @@ for G in graphs(n):
     if G.is_connected() and min(G.degree_iterator()) >= 3:
 	Delta = max(G.degree_iterator())
         c = max(G.cores()) + 1 # coloring number of graph
-        ub = min(c, Delta)
+        ub = min(c, Delta) # c <= Delta always
         if ub > 3: 
 	    omega = G.clique_number()
             mad = G.maximum_average_degree()
